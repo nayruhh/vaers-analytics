@@ -1,0 +1,26 @@
+models:
+  - name: stg_vaers
+    description: "Cleaned VAERS data, same grain as RAW: one row per report x vaccine x symptom-row."
+    columns:
+      - name: vaers_row_id
+        description: "Unique row key (source file + row number)."
+        data_tests:
+          - unique
+          - not_null
+      - name: vaers_id
+        description: "VAERS report ID. Not unique here; a report can span several rows."
+        data_tests:
+          - not_null
+      - name: received_date
+        data_tests:
+          - not_null
+      - name: sex
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Female', 'Male', 'Unknown']
+      - name: recovery_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Recovered', 'Not recovered', 'Unknown']

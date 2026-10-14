@@ -1,0 +1,10 @@
+sources:
+  - name: vaers_raw
+    description: "Raw VAERS data (Kaggle, Jan–Nov 2021) loaded via COPY INTO. All columns are text."
+    database: VAERS
+    schema: RAW
+    tables:
+      - name: vaers_jan_nov_2021
+        description: "One row per report x vaccine x symptom-row. A report (VAERS_ID) can span several rows."
+      - name: features
+        description: "Data dictionary: one row per column with its description."
