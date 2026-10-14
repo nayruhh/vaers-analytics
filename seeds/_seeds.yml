@@ -1,0 +1,18 @@
+seeds:
+  - name: dim_age_group
+    description: "Age groups with sort order for Power BI."
+    columns:
+      - name: age_group
+        data_tests: [unique, not_null]
+
+  - name: dim_manufacturer
+    description: "Manufacturer labels with vaccine platform (mRNA / viral vector)."
+    columns:
+      - name: manufacturer
+        data_tests: [unique, not_null]
+
+  - name: dim_state
+    description: "US state / territory codes with full name and Census region."
+    columns:
+      - name: state_code
+        data_tests: [unique, not_null]

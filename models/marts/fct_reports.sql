@@ -4,8 +4,7 @@ with stg as (
 
 ),
 
--- Collapse to one row per report. Report-level fields repeat on every row,
--- so ANY_VALUE is safe; outcome flags are TRUE if any row says TRUE.
+-- Collapse to one row per report.
 reports as (
 
     select
@@ -17,7 +16,7 @@ reports as (
         any_value(death_date)                 as death_date,
         any_value(days_to_onset)              as days_to_onset_raw,
 
-        any_value(state_code)                 as state_code,
+        any_value(state_code)                 as state_code_raw,
         any_value(age_years)                  as age_years_raw,
         any_value(sex)                        as sex,
 
@@ -42,67 +41,72 @@ reports as (
 
 ),
 
+states as (
+
+    select state_code from {{ ref('dim_state') }}
+
+),
+
 final as (
 
     select
-        vaers_id,
+        -- primary key
+        r.vaers_id,
 
-        -- dates
-        received_date,
-        date_trunc('month', received_date)   as received_month,
-        vaccination_date,
-        onset_date,
-        death_date,
-        -- keep only plausible onset gaps (0–365 days); typos become NULL
-        case when days_to_onset_raw between 0 and 365
-             then days_to_onset_raw end       as days_to_onset,
+        -- foreign keys to dimensions
+        r.received_date,                                          -- -> dim_date
+        coalesce(s.state_code, 'UNK')         as state_code,      -- -> dim_state
+        case
+            when r.age_years_raw is null or r.age_years_raw not between 0 and 120 then 'Unknown'
+            when r.age_years_raw < 12  then '0-11'
+            when r.age_years_raw < 18  then '12-17'
+            when r.age_years_raw < 30  then '18-29'
+            when r.age_years_raw < 40  then '30-39'
+            when r.age_years_raw < 50  then '40-49'
+            when r.age_years_raw < 65  then '50-64'
+            when r.age_years_raw < 75  then '65-74'
+            else '75+'
+        end                                   as age_group,       -- -> dim_age_group
+        case
+            when r.manufacturer_count > 1                  then 'Multiple'
+            when r.single_manufacturer = 'PFIZER-BIONTECH' then 'Pfizer-BioNTech'
+            when r.single_manufacturer = 'MODERNA'         then 'Moderna'
+            when r.single_manufacturer = 'JANSSEN'         then 'Janssen (J&J)'
+            else 'Unknown'
+        end                                   as manufacturer,    -- -> dim_manufacturer
+
+        -- other dates
+        r.vaccination_date,
+        r.onset_date,
+        r.death_date,
 
         -- patient
-        state_code,
-        case when age_years_raw between 0 and 120
-             then age_years_raw end           as age_years,
-        case
-            when age_years_raw is null or age_years_raw not between 0 and 120 then 'Unknown'
-            when age_years_raw < 12  then '0-11'
-            when age_years_raw < 18  then '12-17'
-            when age_years_raw < 30  then '18-29'
-            when age_years_raw < 40  then '30-39'
-            when age_years_raw < 50  then '40-49'
-            when age_years_raw < 65  then '50-64'
-            when age_years_raw < 75  then '65-74'
-            else '75+'
-        end                                   as age_group,
-        sex,
+        case when r.age_years_raw between 0 and 120
+             then r.age_years_raw end         as age_years,
+        r.sex,
 
-        -- vaccine (one label per report)
-        case
-            when manufacturer_count > 1                       then 'Multiple'
-            when single_manufacturer = 'PFIZER-BIONTECH'      then 'Pfizer-BioNTech'
-            when single_manufacturer = 'MODERNA'              then 'Moderna'
-            when single_manufacturer = 'JANSSEN'              then 'Janssen (J&J)'
-            else 'Unknown'
-        end                                   as manufacturer,
-        administered_by,
-
-        -- outcomes
-        is_death,
-        is_life_threatening,
-        is_hospitalized,
-        is_prolonged_stay,
-        is_disabled,
-        is_birth_defect,
-        -- FDA definition of a "serious" VAERS report
-        (is_death or is_life_threatening or is_hospitalized
-         or is_prolonged_stay or is_disabled or is_birth_defect)
+        -- measures and flags
+        case when r.days_to_onset_raw between 0 and 365
+             then r.days_to_onset_raw end     as days_to_onset,
+        r.is_death,
+        r.is_life_threatening,
+        r.is_hospitalized,
+        r.is_prolonged_stay,
+        r.is_disabled,
+        r.is_birth_defect,
+        (r.is_death or r.is_life_threatening or r.is_hospitalized
+         or r.is_prolonged_stay or r.is_disabled or r.is_birth_defect)
                                               as is_serious,
-        had_er_visit,
-        had_office_visit,
-        hospital_days,
-        recovery_status,
+        r.had_er_visit,
+        r.had_office_visit,
+        r.hospital_days,
+        r.recovery_status,
+        r.administered_by,
+        r.symptom_text
 
-        symptom_text
-
-    from reports
+    from reports r
+    left join states s
+        on r.state_code_raw = s.state_code
 
 )
 
