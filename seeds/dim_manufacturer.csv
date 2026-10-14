@@ -1,0 +1,6 @@
+manufacturer,manufacturer_sort,vaccine_platform
+Pfizer-BioNTech,1,mRNA
+Moderna,2,mRNA
+Janssen (J&J),3,Viral vector
+Multiple,4,Mixed
+Unknown,5,Unknown
