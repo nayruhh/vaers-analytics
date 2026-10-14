@@ -1,0 +1,49 @@
+models:
+  - name: fct_reports
+    description: "One row per VAERS report (Jan–Nov 2021 COVID-19 vaccines). Main table for Power BI."
+    columns:
+      - name: vaers_id
+        description: "VAERS report ID. Unique in this table."
+        data_tests:
+          - unique
+          - not_null
+      - name: manufacturer
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Pfizer-BioNTech', 'Moderna', 'Janssen (J&J)', 'Multiple', 'Unknown']
+      - name: age_group
+        data_tests:
+          - not_null
+      - name: is_serious
+        description: "TRUE if death, life-threatening, hospitalized, prolonged stay, disability, or birth defect."
+
+  - name: fct_report_symptoms
+    description: "One row per report x symptom (MedDRA term)."
+    columns:
+      - name: report_symptom_id
+        data_tests:
+          - unique
+          - not_null
+      - name: vaers_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_reports')
+                field: vaers_id
+
+  - name: fct_report_vaccines
+    description: "One row per report x vaccine dose."
+    columns:
+      - name: report_vaccine_id
+        data_tests:
+          - unique
+          - not_null
+      - name: vaers_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_reports')
+                field: vaers_id
