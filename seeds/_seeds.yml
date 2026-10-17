@@ -12,7 +12,12 @@ seeds:
         data_tests: [unique, not_null]
 
   - name: dim_state
-    description: "US state / territory codes with full name and Census region."
+    description: "US state / territory codes with full name, Census region and 2020 Census population."
+    config:
+      column_types:
+        population_2020: number(12,0)
     columns:
       - name: state_code
         data_tests: [unique, not_null]
+      - name: population_2020
+        description: "Resident population, 2020 Census (1 April 2020). Blank where no US census count exists."
